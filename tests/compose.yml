@@ -1,0 +1,7 @@
+version: "3"
+services:
+  redis:
+    hostname: test-redis
+    image: docker.io/library/redis:6
+    ports:
+      - "6399:6379"

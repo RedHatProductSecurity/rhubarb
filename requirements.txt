@@ -1,0 +1,5 @@
+# 5.2.0 is the first version that introduced celery.app.task.Task.before_start
+celery>=5.2.0
+# 4.5.0 is the lowest tested version, but should possibly work with lower
+# versions assuming the Redis server version is supported
+redis>=4.5.0
