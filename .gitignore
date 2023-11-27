@@ -1,2 +1,7 @@
 # ignore pyenv files
 .python-version
+# ignore pycache
+__pycache__/
+# python build dirs
+dist/
+*.egg-info/
