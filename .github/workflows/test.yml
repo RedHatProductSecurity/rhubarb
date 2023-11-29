@@ -8,16 +8,13 @@ on:
 jobs:
   unit:
     runs-on: ubuntu-latest
-    services:
-      redis:
-        image: redis
-        ports:
-          - 6399:6379
     strategy:
       matrix:
         python: ["3.8", "3.9", "3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
+      - name: Setup service test containers
+        run: docker-compose -f tests/compose.yml up -d
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
@@ -25,3 +22,5 @@ jobs:
         run: pip install -r requirements-testing.txt
       - name: Run tests
         run: tox
+      - name: Bring down service test containers
+        run: docker-compose -f tests/compose.yml down
