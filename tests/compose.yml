@@ -5,3 +5,21 @@ services:
     image: docker.io/library/redis:6
     ports:
       - "6399:6379"
+  redis-ssl:
+    hostname: test-redis-ssl
+    image: docker.io/bitnami/redis
+    environment:
+      REDIS_PORT_NUMBER: "0"
+      REDIS_TLS_ENABLED: "yes"
+      REDIS_TLS_PORT_NUMBER: "7000"
+      REDIS_TLS_CERT_FILE: "/opt/bitnami/redis/certs/redis.crt"
+      REDIS_TLS_KEY_FILE: "/opt/bitnami/redis/certs/redis.key"
+      REDIS_TLS_CA_FILE: "/opt/bitnami/redis/certs/ca.crt"
+      REDIS_TLS_AUTH_CLIENTS: "no"
+      ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "7000:7000"
+    volumes:
+      - ./etc/redis/ca.crt:/opt/bitnami/redis/certs/ca.crt:z
+      - ./etc/redis/redis.crt:/opt/bitnami/redis/certs/redis.crt:z
+      - ./etc/redis/redis.key:/opt/bitnami/redis/certs/redis.key:z

@@ -1,3 +1,6 @@
+import ssl
+
+import pytest
 from celery.result import AsyncResult
 
 from rhubarb.tasks import Lock, LockableTask
@@ -23,6 +26,19 @@ class TestLockableTask:
         """
         Test that the connection to the Redis server works.
         """
+        task_instance = self._get_task_instance(celery_app)
+        assert task_instance._LockableTask__redis_client.ping() is True
+
+    @pytest.mark.celery(
+        rhubarb_backend_url="rediss://localhost:7000/",
+        rhubarb_backend_kwargs={
+            "ssl_keyfile": "./tests/etc/redis/redis.key",
+            "ssl_certfile": "./tests/etc/redis/redis.crt",
+            "ssl_ca_certs": "./tests/etc/redis/ca.crt",
+            "ssl_cert_reqs": ssl.CERT_REQUIRED,
+        },
+    )
+    def test_tls_connection(self, celery_app):
         task_instance = self._get_task_instance(celery_app)
         assert task_instance._LockableTask__redis_client.ping() is True
 
