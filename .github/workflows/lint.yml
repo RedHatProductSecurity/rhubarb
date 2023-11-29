@@ -1,0 +1,25 @@
+name: Lint
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  merge_group:
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+      - name: Install dependencies
+        run: pip install black==22.12.0 isort==5.12.0 flake8==6.1.0
+      - name: Run black
+        run: black --check .
+      - name: Run isort
+        run: isort --diff --check .
+      - name: Run flake8
+        # E203: whitespace before ':', ignored by Black, non-PEP8-compliant
+        # E501: line too long, black'll take care of that
+        run: flake8 --max-line-length=88 --extend-ignore=E203,E501
