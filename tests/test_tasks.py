@@ -16,7 +16,7 @@ class TestLockableTask:
         Test that task initialization sets up the necessary attributes.
         """
         task_instance = self._get_task_instance(celery_app)
-        assert task_instance._LockableTask__lock_key == f"tests.test_tasks.my_task_lock"
+        assert task_instance._LockableTask__lock_key == "tests.test_tasks.my_task_lock"
         assert task_instance._LockableTask__lock is None
 
     def test_standard_connection(self, celery_app):
