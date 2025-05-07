@@ -105,6 +105,23 @@ class TestLockableTask:
 
 
 class TestIntegration:
+    def test_single_run(self, celery_app, celery_worker):
+        """
+        Test that running a task works as expected.
+        """
+
+        @celery_app.task(
+            base=LockableTask, name="tests.test_tasks.test_single_run.my_task"
+        )
+        def my_task():
+            return "foo"
+
+        task_exec = my_task.apply()
+        result, output = next(task_exec.collect(timeout=10))
+
+        assert output == "foo"
+        assert result.state == "SUCCESS"
+
     def test_duplicate_run(self, celery_app, celery_worker):
         """
         Test that running the same task in parallel fails.
@@ -121,9 +138,10 @@ class TestIntegration:
 
         # actually execute the task
         task_exec = my_task.apply()
-        result = AsyncResult(task_exec.task_id)
+        result, output = next(task_exec.collect(timeout=10))
 
-        assert task_exec.get() is None
-        assert result.state == "DUPLICATE"
+        assert output is None
+        # Celery overrides the task's state based on the raised exception
+        assert result.state == "REJECTED"
         # cleanup
         task_instance.release_lock()
