@@ -1,9 +1,8 @@
 import ssl
 
 import pytest
-from celery.result import AsyncResult
 
-from rhubarb.tasks import Lock, LockableTask
+from rhubarb.tasks import Lock, LockableTask, LockableTaskWithArgs
 
 
 class TestLockableTask:
@@ -19,7 +18,7 @@ class TestLockableTask:
         Test that task initialization sets up the necessary attributes.
         """
         task_instance = self._get_task_instance(celery_app)
-        assert task_instance._LockableTask__lock_key == "tests.test_tasks.my_task_lock"
+        assert task_instance.lock_key == "tests.test_tasks.my_task_lock"
         assert task_instance._LockableTask__lock is None
 
     def test_standard_connection(self, celery_app):
@@ -52,7 +51,7 @@ class TestLockableTask:
         lock = task_instance._LockableTask__lock
         assert lock is not None
 
-        assert task_instance._LockableTask__lock_key == lock.key
+        assert task_instance.lock_key == lock.key
         # use getdel to cleanup test redis instance
         assert (
             task_instance._LockableTask__redis_client.getdel(lock.key)
@@ -143,5 +142,27 @@ class TestIntegration:
         assert output is None
         # Celery overrides the task's state based on the raised exception
         assert result.state == "REJECTED"
+        # cleanup
+        task_instance.release_lock()
+
+    def test_with_params(self, celery_app, celery_worker):
+        """
+        Test that running multiple tasks with different parameters works as expected.
+        """
+
+        @celery_app.task(base=LockableTaskWithArgs)
+        def my_task(param):
+            return param
+
+        # simulate the task already running (i.e. acquired lock) as there is no
+        # easy way to test concurrent task execution with pytest
+        task_instance = celery_app.tasks["tests.test_tasks.my_task"]
+        task_instance.acquire_lock()
+
+        task_exec = my_task.apply(args=["foo"])
+        result, output = next(task_exec.collect(timeout=10))
+
+        assert output == "foo"
+        assert result.state == "SUCCESS"
         # cleanup
         task_instance.release_lock()

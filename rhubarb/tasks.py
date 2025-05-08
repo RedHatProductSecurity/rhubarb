@@ -1,4 +1,5 @@
 import functools
+import hashlib
 import uuid
 from dataclasses import dataclass
 
@@ -20,7 +21,7 @@ class Lock:
 class LockableTask(Task):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.__lock_key = f"{self.name}_lock"
+        self.lock_key = f"{self.name}_lock"
         self.__lock = None
 
     @functools.cached_property
@@ -54,7 +55,7 @@ class LockableTask(Task):
         # TODO: allow overriding TASK_LOCK_TTL on a per-task basis
         if ttl is None:
             ttl = self._rhubarb_settings.TASK_LOCK_TTL
-        lock = Lock(self.__lock_key, self._gen_unique_value(), ttl)
+        lock = Lock(self.lock_key, self._gen_unique_value(), ttl)
         if locked := self.__redis_client.set(lock.key, lock.val, nx=True, ex=lock.ttl):
             # lock has been successfully acquired
             self.__lock = lock
@@ -92,7 +93,7 @@ class LockableTask(Task):
         """
         if ttl is None:
             ttl = self._rhubarb_settings.TASK_LOCK_TTL
-        self.__redis_client.expire(self.__lock_key, ttl)
+        self.__redis_client.expire(self.lock_key, ttl)
 
     def before_start(self, task_id, args, kwargs):
         if not self.acquire_lock():
@@ -111,3 +112,16 @@ class LockableTask(Task):
 
     def on_retry(self, exc, task_id, args, kwargs, einfo):
         self.release_lock()
+
+
+class LockableTaskWithArgs(LockableTask):
+    """
+    A subclass of LockableTask that generates a unique lock key based on the
+    task's arguments.
+    """
+
+    def before_start(self, task_id, args, kwargs):
+        self.lock_key = (
+            f"{self.name}_{hashlib.sha256(str(args).encode()).hexdigest()}_lock"
+        )
+        super().before_start(task_id, args, kwargs)
