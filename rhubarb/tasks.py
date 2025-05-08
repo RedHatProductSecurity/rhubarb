@@ -96,7 +96,7 @@ class LockableTask(Task):
         self.__redis_client.expire(self.lock_key, ttl)
 
     def before_start(self, task_id, args, kwargs):
-        if not self.acquire_lock():
+        if not self.acquire_lock(kwargs.get("ttl")):
             # We need both of these so that Flower doesn't treat them as active
             self.update_state(task_id, state="DUPLICATE")
             self.send_event("task-revoked")
