@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup service test containers
-        run: docker-compose -f tests/compose.yml up -d
+        run: docker compose -f tests/compose.yml up -d
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
@@ -23,4 +23,4 @@ jobs:
       - name: Run tests
         run: tox
       - name: Bring down service test containers
-        run: docker-compose -f tests/compose.yml down
+        run: docker compose -f tests/compose.yml down
