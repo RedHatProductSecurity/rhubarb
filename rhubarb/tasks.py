@@ -23,6 +23,9 @@ class LockableTask(Task):
         super().__init__(*args, **kwargs)
         self.lock_key = f"{self.name}_lock"
         self.__lock = None
+        self.__lock_ttl = getattr(
+            self, "lock_ttl", self._rhubarb_settings.TASK_LOCK_TTL
+        )
 
     @functools.cached_property
     def _rhubarb_settings(self) -> Settings:
@@ -52,9 +55,9 @@ class LockableTask(Task):
         This method returns True if the KEY was successfully created, signaling
         that the lock was acquired, and False if the lock is already in use.
         """
-        # TODO: allow overriding TASK_LOCK_TTL on a per-task basis
+
         if ttl is None:
-            ttl = self._rhubarb_settings.TASK_LOCK_TTL
+            ttl = self.__lock_ttl
         lock = Lock(self.lock_key, self._gen_unique_value(), ttl)
         if locked := self.__redis_client.set(lock.key, lock.val, nx=True, ex=lock.ttl):
             # lock has been successfully acquired
@@ -92,11 +95,11 @@ class LockableTask(Task):
         Currently unused.
         """
         if ttl is None:
-            ttl = self._rhubarb_settings.TASK_LOCK_TTL
+            ttl = self.__lock_ttl
         self.__redis_client.expire(self.lock_key, ttl)
 
     def before_start(self, task_id, args, kwargs):
-        if not self.acquire_lock(kwargs.get("ttl")):
+        if not self.acquire_lock():
             # We need both of these so that Flower doesn't treat them as active
             self.update_state(task_id, state="DUPLICATE")
             self.send_event("task-revoked")

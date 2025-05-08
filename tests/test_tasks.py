@@ -102,6 +102,25 @@ class TestLockableTask:
         task_instance._LockableTask__lock = old_lock
         assert task_instance.release_lock() is True
 
+    def test_ttl_per_task(self, celery_app):
+        @celery_app.task(base=LockableTask, lock_ttl=1337)
+        def my_task():
+            return
+
+        task_instance = celery_app.tasks["tests.test_tasks.my_task"]
+        task_instance.acquire_lock()
+
+        lock = task_instance._LockableTask__lock
+
+        assert lock is not None
+        assert lock.ttl == 1337
+
+        # use getdel to cleanup test redis instance
+        assert (
+            task_instance._LockableTask__redis_client.getdel(lock.key)
+            == lock.val.encode()
+        )
+
 
 class TestIntegration:
     def test_single_run(self, celery_app, celery_worker):
