@@ -157,12 +157,35 @@ class TestIntegration:
         # simulate the task already running (i.e. acquired lock) as there is no
         # easy way to test concurrent task execution with pytest
         task_instance = celery_app.tasks["tests.test_tasks.my_task"]
-        task_instance.acquire_lock()
+        task_instance.before_start("mock_task_id", args=["bar"], kwargs={})
 
         task_exec = my_task.apply(args=["foo"])
         result, output = next(task_exec.collect(timeout=10))
 
         assert output == "foo"
         assert result.state == "SUCCESS"
+        # cleanup
+        task_instance.release_lock()
+
+    def test_with_params_duplicate(self, celery_app, celery_worker):
+        """
+        Test that running the same task with the same parameters in parallel fails.
+        """
+
+        @celery_app.task(base=LockableTaskWithArgs)
+        def my_task(param):
+            return param
+
+        # simulate the task already running (i.e. acquired lock) as there is no
+        # easy way to test concurrent task execution with pytest
+        task_instance = celery_app.tasks["tests.test_tasks.my_task"]
+        task_instance.before_start("mock_task_id", args=["foo"], kwargs={})
+
+        # actually execute the task
+        task_exec = my_task.apply(args=["foo"])
+        result, output = next(task_exec.collect(timeout=10))
+
+        assert output is None
+        assert result.state == "REJECTED"
         # cleanup
         task_instance.release_lock()
