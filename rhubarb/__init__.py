@@ -1,4 +1,4 @@
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "Adrian Torres, Red Hat Product Security"
 __contact__ = "atorresj@redhat.com"
 __homepage__ = "https://github.com/RedHatProductSecurity/rhubarb/"
