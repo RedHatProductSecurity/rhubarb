@@ -12,10 +12,10 @@ class Settings:
     def BACKEND_URL(self) -> str:
         # fallback to celery's broker url
         url = self._get("rhubarb_backend_url", self._get("broker_url"))
-        if url is None or not url.startswith("redis"):
+        if url is None:
             # fallback to celery's results backend
             url = self._get("result_backend")
-        if url is None or not url.startswith("redis"):
+        if url is None:
             raise ImproperlyConfigured("No valid backend was found")
         return url
 

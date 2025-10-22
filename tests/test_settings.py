@@ -19,18 +19,10 @@ class TestBackendUrl:
         settings = Settings(celery_app)
         assert settings.BACKEND_URL == celery_app.conf.broker_url
 
-    @pytest.mark.celery(result_backend="redis://")
+    @pytest.mark.celery(broker_url=None, result_backend="redis://")
     def test_fallback_backend(self, celery_app):
         """
         Copy celery's RESULT_BACKEND as fallback.
-        """
-        settings = Settings(celery_app)
-        assert settings.BACKEND_URL == celery_app.conf.result_backend
-
-    @pytest.mark.celery(broker_url="amqp://", result_backend="redis://")
-    def test_fallback_if_not_redis(self, celery_app):
-        """
-        Copy celery's RESULT_BACKEND if BROKER_URL is not redis.
         """
         settings = Settings(celery_app)
         assert settings.BACKEND_URL == celery_app.conf.result_backend
@@ -61,7 +53,7 @@ class TestBackendUrl:
         settings = Settings(celery_app)
         assert settings.BACKEND_URL == "rediss://"
 
-    @pytest.mark.celery(broker_url="amqp://", result_backend="django-db")
+    @pytest.mark.celery(broker_url=None, result_backend=None)
     def test_no_redis_backend_available(self, celery_app):
         """
         Raise ImproperlyConfigured if no valid backend has been configured.
@@ -69,6 +61,14 @@ class TestBackendUrl:
         settings = Settings(celery_app)
         with pytest.raises(ImproperlyConfigured, match="No valid backend was found"):
             settings.BACKEND_URL
+
+    @pytest.mark.celery(broker_url="unix://", result_backend=None)
+    def test_unix_socket_backend(self, celery_app):
+        """
+        Allow using protocols other than redis://
+        """
+        settings = Settings(celery_app)
+        assert settings.BACKEND_URL == "unix://"
 
     @pytest.mark.celery
     def test_default_backend_kwargs(self, celery_app):
